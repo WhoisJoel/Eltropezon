@@ -24,7 +24,7 @@ jobs:
           pip install pyinstaller PyQt6 pandas matplotlib
       
       - name: Build Windows Executable
-        run: pyinstaller --onefile --windowed main.py
+        run: pyinstaller --onefile --windowed EltropezonP/main.py
         
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
@@ -55,7 +55,7 @@ jobs:
           pip install pyinstaller PyQt6 pandas matplotlib
 
       - name: Build Linux Executable
-        run: pyinstaller --onefile --windowed main.py
+        run: pyinstaller --onefile --windowed EltropezonP/main.py
         
       - name: Upload Linux Artifact
         uses: actions/upload-artifact@v4
