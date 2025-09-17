@@ -1,0 +1,72 @@
+name: Build Cross-Platform Executables
+
+# Este flujo de trabajo se ejecutará cada vez que subas cambios a la rama 'main'
+on:
+  push:
+    branches:
+      - main
+  # También puedes añadir 'pull_request' si quieres que se ejecute en cada pull request
+  # pull_request:
+  #   branches:
+  #     - main
+
+jobs:
+  # Un trabajo para construir el ejecutable para Windows
+  build-windows:
+    # El sistema operativo virtual que usaremos para construir
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller PyQt6 pandas matplotlib
+      
+      - name: Build Windows Executable
+        run: pyinstaller --onefile --windowed main.py
+        
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Control-de-Costos-Windows-x64
+          path: dist/main.exe
+
+  # Un trabajo para construir el ejecutable para Ubuntu (Linux)
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-glx # Necesario para PyQt6 en Ubuntu
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller PyQt6 pandas matplotlib
+
+      - name: Build Linux Executable
+        run: pyinstaller --onefile --windowed main.py
+        
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Control-de-Costos-Ubuntu-x64
+          path: dist/main
