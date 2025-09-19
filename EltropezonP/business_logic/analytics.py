@@ -11,29 +11,17 @@ class FinancialAnalytics:
         self.db = db_manager
 
     def get_financial_summary(self, start_date=None, end_date=None):
-        """
-        Calcula el resumen financiero (ingresos, gastos, utilidad) en un rango de fechas.
 
-        Args:
-            start_date (str, opcional): Fecha de inicio en formato 'YYYY-MM-DD'.
-            end_date (str, opcional): Fecha de fin en formato 'YYYY-MM-DD'.
-
-        Returns:
-            dict: Un diccionario con los totales de ingresos, gastos y utilidad.
-        """
         transactions = self.db.get_all_transactions()
         if not transactions:
             return {"Ingresos Totales": 0.0, "Gastos Totales": 0.0, "Utilidad Neta": 0.0}
 
-        # Convertir la lista de objetos Transaction a un DataFrame de pandas
         df = pd.DataFrame([t.__dict__ for t in transactions])
 
-        # Filtrar por rango de fechas si se proporcionan
         if start_date and end_date:
             df['date'] = pd.to_datetime(df['date'])
             df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
 
-        # Calcular los totales
         total_income = df[df['type'] == 'Ingreso']['amount'].sum()
         total_expenses = df[df['type'] == 'Gasto']['amount'].sum()
         net_profit = total_income - total_expenses
@@ -42,6 +30,46 @@ class FinancialAnalytics:
             "Ingresos Totales": total_income,
             "Gastos Totales": total_expenses,
             "Utilidad Neta": net_profit
+        }
+
+    def get_monthly_summary(self, start_date=None, end_date=None) -> dict:
+        """
+        Calcula los ingresos y gastos totales por mes en un rango de fechas.
+
+        Args:
+            start_date (str, opcional): Fecha de inicio en formato 'YYYY-MM-DD'.
+            end_date (str, opcional): Fecha de fin en formato 'YYYY-MM-DD'.
+
+        Returns:
+            dict: Un diccionario con las etiquetas de los meses, y listas de ingresos y gastos.
+        """
+        transactions = self.db.get_all_transactions()
+        if not transactions:
+            return {"labels": [], "income": [], "expenses": []}
+
+        df = pd.DataFrame([t.__dict__ for t in transactions])
+        df['date'] = pd.to_datetime(df['date'])
+
+        if start_date and end_date:
+            df = df[(df['date'] >= start_date) & (df['date'] <= end_date)]
+
+        # Pivotar la tabla para tener Ingreso y Gasto como columnas
+        monthly_summary = df.pivot_table(
+            index=df['date'].dt.to_period('M'),
+            columns='type',
+            values='amount',
+            aggfunc='sum'
+        ).fillna(0)
+
+        # Preparar los datos para el gráfico
+        labels = [m.strftime('%b %y') for m in monthly_summary.index]
+        income = monthly_summary['Ingreso'].tolist()
+        expenses = monthly_summary['Gasto'].tolist()
+
+        return {
+            "labels": labels,
+            "income": income,
+            "expenses": expenses
         }
 
     def get_expenses_by_category(self, start_date=None, end_date=None):
@@ -81,45 +109,6 @@ class FinancialAnalytics:
             float: El punto de equilibrio en unidades.
         """
         if (price_per_unit - variable_cost_per_unit) <= 0:
-            return float('inf')  # Retorna infinito si no hay margen de contribución
+            return float('inf')
 
         return fixed_costs / (price_per_unit - variable_cost_per_unit)
-
-
-# Ejemplo de uso:
-if __name__ == "__main__":
-    from database.db_manager import DBManager
-
-    # Inicializar el gestor de la base de datos
-    db_manager = DBManager()
-
-    # Crear una instancia del objeto de análisis financiero
-    analytics = FinancialAnalytics(db_manager)
-
-    # Añadir algunas transacciones de prueba
-    db_manager.add_transaction(
-        Transaction(description="Venta de chicha", amount=150.0, type="Ingreso", category="Ventas"))
-    db_manager.add_transaction(
-        Transaction(description="Salario del personal", amount=600.0, type="Gasto", category="Salarios Fijos"))
-    db_manager.add_transaction(
-        Transaction(description="Compra de maiz", amount=75.0, type="Gasto", category="Materia Prima"))
-
-    # Obtener el resumen financiero
-    summary = analytics.get_financial_summary()
-    print("--- Resumen Financiero ---")
-    for key, value in summary.items():
-        print(f"{key}: {value}")
-
-    # Obtener gastos por categoría
-    expenses_by_cat = analytics.get_expenses_by_category()
-    print("\n--- Gastos por Categoría ---")
-    print(expenses_by_cat)
-
-    fixed_costs = 600.0  # Asumimos que el salario es un costo fijo
-    price_per_unit = 5.0  # Precio de venta de la chicha
-    variable_cost_per_unit = 2.5  # Costo de ingredientes por unidad
-
-    break_even_point = analytics.get_break_even_point(fixed_costs, price_per_unit, variable_cost_per_unit)
-    print(f"\nEl punto de equilibrio es: {break_even_point:.2f} unidades.")
-
-    db_manager.close()

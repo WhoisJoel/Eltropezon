@@ -24,5 +24,3 @@ class Transaction:
     # Categoría del gasto (ej. 'Materia Prima', 'Salarios', 'Publicidad')
     category: str = ""
 
-# NOTA: La clase `Transaction` se encargará de validar los datos en un futuro,
-# pero por ahora, la dejamos simple para que la base de datos pueda trabajar con ella.
