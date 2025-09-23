@@ -8,17 +8,19 @@ class DBManager:
     def __init__(self):
         self.conn = None
         self.connect()
+        self._initialize_database()
 
     def connect(self):
         try:
-            # Usamos DB_PATH, que ya apunta a la ubicación correcta
             self.conn = sqlite3.connect(DB_PATH)
-            self.create_table()
+            self.conn.row_factory = sqlite3.Row  # Acceso a columnas por nombre
         except sqlite3.Error as e:
             print(f"Error al conectar con la base de datos: {e}")
 
-    def create_table(self):
-        """Crea la tabla de transacciones si no existe."""
+    def _initialize_database(self):
+        """
+        Crea la tabla si no existe.
+        """
         try:
             cursor = self.conn.cursor()
             cursor.execute('''
@@ -43,8 +45,8 @@ class DBManager:
             cursor.execute('''
                 INSERT INTO transactions (date, description, amount, type, category)
                 VALUES (?, ?, ?, ?, ?)
-            ''', (transaction.date, transaction.description, transaction.amount, transaction.type,
-                  transaction.category))
+            ''', (transaction.date, transaction.description, transaction.amount,
+                  transaction.type, transaction.category))
             self.conn.commit()
             print(f"Transacción '{transaction.description}' añadida correctamente.")
         except sqlite3.Error as e:
@@ -56,8 +58,14 @@ class DBManager:
             cursor = self.conn.cursor()
             cursor.execute("SELECT * FROM transactions ORDER BY date DESC")
             rows = cursor.fetchall()
-            return [Transaction(id=row[0], date=row[1], description=row[2], amount=row[3], type=row[4], category=row[5])
-                    for row in rows]
+            return [Transaction(
+                        id=row['id'],
+                        date=row['date'],
+                        description=row['description'],
+                        amount=row['amount'],
+                        type=row['type'],
+                        category=row['category']
+                    ) for row in rows]
         except sqlite3.Error as e:
             print(f"Error al obtener las transacciones: {e}")
             return []
@@ -69,8 +77,14 @@ class DBManager:
             cursor.execute("SELECT * FROM transactions WHERE id = ?", (transaction_id,))
             row = cursor.fetchone()
             if row:
-                return Transaction(id=row[0], date=row[1], description=row[2], amount=row[3], type=row[4],
-                                   category=row[5])
+                return Transaction(
+                    id=row['id'],
+                    date=row['date'],
+                    description=row['description'],
+                    amount=row['amount'],
+                    type=row['type'],
+                    category=row['category']
+                )
             return None
         except sqlite3.Error as e:
             print(f"Error al obtener la transacción por ID: {e}")
@@ -84,8 +98,8 @@ class DBManager:
                 UPDATE transactions
                 SET date = ?, description = ?, amount = ?, type = ?, category = ?
                 WHERE id = ?
-            ''', (transaction.date, transaction.description, transaction.amount, transaction.type, transaction.category,
-                  transaction.id))
+            ''', (transaction.date, transaction.description, transaction.amount,
+                  transaction.type, transaction.category, transaction.id))
             self.conn.commit()
             print(f"Transacción ID {transaction.id} actualizada correctamente.")
         except sqlite3.Error as e:
@@ -102,18 +116,22 @@ class DBManager:
             print(f"Error al borrar la transacción: {e}")
 
     def get_transaction_by_description(self, description: str) -> Optional[Transaction]:
-        """
-        Obtiene la transacción más reciente por su descripción.
-        Esto es útil para sugerir datos al registrar una transacción recurrente.
-        """
+        """Obtiene la transacción más reciente por su descripción."""
         try:
             cursor = self.conn.cursor()
-            cursor.execute("SELECT * FROM transactions WHERE description = ? ORDER BY date DESC LIMIT 1",
-                           (description,))
+            cursor.execute(
+                "SELECT * FROM transactions WHERE description = ? ORDER BY date DESC LIMIT 1",
+                (description,))
             row = cursor.fetchone()
             if row:
-                return Transaction(description=row[2], amount=row[3], type=row[4],
-                                   category=row[5])
+                return Transaction(
+                    id=row['id'],
+                    date=row['date'],
+                    description=row['description'],
+                    amount=row['amount'],
+                    type=row['type'],
+                    category=row['category']
+                )
             return None
         except sqlite3.Error as e:
             print(f"Error al obtener la transacción por descripción: {e}")

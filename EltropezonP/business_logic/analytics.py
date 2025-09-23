@@ -61,6 +61,10 @@ class FinancialAnalytics:
             aggfunc='sum'
         ).fillna(0)
 
+        for col in ["Ingreso", "Gasto"]:
+            if col not in monthly_summary.columns:
+                monthly_summary[col] = 0
+
         # Preparar los datos para el gráfico
         labels = [m.strftime('%b %y') for m in monthly_summary.index]
         income = monthly_summary['Ingreso'].tolist()
